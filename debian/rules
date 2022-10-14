@@ -1,0 +1,8 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	rollup -c && rollup -c --environment ES && rollup -c --environment DEPS
+	sed -i dist/magic-string.umd.js -e "s/export.__esModule = true;/object.defineProperty(exports, '__esModule', {value: true});/g"

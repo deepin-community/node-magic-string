@@ -1,0 +1,5 @@
+version=4
+opts=\
+dversionmangle=s/\+(debian|dfsg|ds|deb)(\.\d+)?$//,\
+filenamemangle=s/.*\/v?([\d\.-]+)\.tar\.gz/node-magic-string-$1.tar.gz/ \
+ https://github.com/rich-harris/magic-string/tags .*/v?([\d\.]+).tar.gz
