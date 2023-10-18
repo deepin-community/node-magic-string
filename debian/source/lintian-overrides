@@ -1,6 +1,10 @@
 # This is test source, so it contains a pre-compiled result in order to test
 # the treatment still gives the same!
-source: source-is-missing test/MagicString.Bundle.js line 128 is 388 characters long (>256)
+source-is-missing [test/MagicString.Bundle.js]
+source-contains-prebuilt-javascript-object [test/MagicString.Bundle.js]
+source-contains-prebuilt-javascript-object [test/MagicString.js]
 # This is example code
-source: source-is-missing example/app.inlinemap.js line 2 is 471 characters long (>256)
-source: source-contains-prebuilt-javascript-object example/app.inlinemap.js line 2 is 471 characters long (>256)
+source-is-missing [example/app.inlinemap.js]
+source-contains-prebuilt-javascript-object [example/app.inlinemap.js]
+# Doc
+very-long-line-length-in-source-file * [*.md:*]

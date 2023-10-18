@@ -13,7 +13,7 @@ const n = '\n';
 const warned = {
 	insertLeft: false,
 	insertRight: false,
-	storeName: false
+	storeName: false,
 };
 
 export default class MagicString {
@@ -21,19 +21,20 @@ export default class MagicString {
 		const chunk = new Chunk(0, string.length, string);
 
 		Object.defineProperties(this, {
-			original:              { writable: true, value: string },
-			outro:                 { writable: true, value: '' },
-			intro:                 { writable: true, value: '' },
-			firstChunk:            { writable: true, value: chunk },
-			lastChunk:             { writable: true, value: chunk },
-			lastSearchedChunk:     { writable: true, value: chunk },
-			byStart:               { writable: true, value: {} },
-			byEnd:                 { writable: true, value: {} },
-			filename:              { writable: true, value: options.filename },
+			original: { writable: true, value: string },
+			outro: { writable: true, value: '' },
+			intro: { writable: true, value: '' },
+			firstChunk: { writable: true, value: chunk },
+			lastChunk: { writable: true, value: chunk },
+			lastSearchedChunk: { writable: true, value: chunk },
+			byStart: { writable: true, value: {} },
+			byEnd: { writable: true, value: {} },
+			filename: { writable: true, value: options.filename },
 			indentExclusionRanges: { writable: true, value: options.indentExclusionRanges },
-			sourcemapLocations:    { writable: true, value: new BitSet() },
-			storedNames:           { writable: true, value: {} },
-			indentStr:             { writable: true, value: guessIndent(string) }
+			sourcemapLocations: { writable: true, value: new BitSet() },
+			storedNames: { writable: true, value: {} },
+			indentStr: { writable: true, value: undefined },
+			ignoreList: { writable: true, value: options.ignoreList },
 		});
 
 		if (DEBUG) {
@@ -143,7 +144,7 @@ export default class MagicString {
 			mappings.advance(this.intro);
 		}
 
-		this.firstChunk.eachNext(chunk => {
+		this.firstChunk.eachNext((chunk) => {
 			const loc = locate(chunk.start);
 
 			if (chunk.intro.length) mappings.advance(chunk.intro);
@@ -163,11 +164,12 @@ export default class MagicString {
 		});
 
 		return {
-			file: options.file ? options.file.split(/[/\\]/).pop() : null,
-			sources: [options.source ? getRelativePath(options.file || '', options.source) : null],
-			sourcesContent: options.includeContent ? [this.original] : [null],
+			file: options.file ? options.file.split(/[/\\]/).pop() : undefined,
+			sources: [options.source ? getRelativePath(options.file || '', options.source) : (options.file || '')],
+			sourcesContent: options.includeContent ? [this.original] : undefined,
 			names,
-			mappings: mappings.raw
+			mappings: mappings.raw,
+			x_google_ignoreList: this.ignoreList ? [sourceIndex] : undefined
 		};
 	}
 
@@ -175,7 +177,19 @@ export default class MagicString {
 		return new SourceMap(this.generateDecodedMap(options));
 	}
 
+	_ensureindentStr() {
+		if (this.indentStr === undefined) {
+			this.indentStr = guessIndent(this.original);
+		}
+	}
+
+	_getRawIndentString() {
+		this._ensureindentStr();
+		return this.indentStr;
+	}
+
 	getIndentString() {
+		this._ensureindentStr();
 		return this.indentStr === null ? '\t' : this.indentStr;
 	}
 
@@ -187,7 +201,10 @@ export default class MagicString {
 			indentStr = undefined;
 		}
 
-		indentStr = indentStr !== undefined ? indentStr : this.indentStr || '\t';
+		if (indentStr === undefined) {
+			this._ensureindentStr();
+			indentStr = this.indentStr || '\t';
+		}
 
 		if (indentStr === '') return this; // noop
 
@@ -199,7 +216,7 @@ export default class MagicString {
 		if (options.exclude) {
 			const exclusions =
 				typeof options.exclude[0] === 'number' ? [options.exclude] : options.exclude;
-			exclusions.forEach(exclusion => {
+			exclusions.forEach((exclusion) => {
 				for (let i = exclusion[0]; i < exclusion[1]; i += 1) {
 					isExcluded[i] = true;
 				}
@@ -207,7 +224,7 @@ export default class MagicString {
 		}
 
 		let shouldIndentNextCharacter = options.indentStart !== false;
-		const replacer = match => {
+		const replacer = (match) => {
 			if (shouldIndentNextCharacter) return `${indentStr}${match}`;
 			shouldIndentNextCharacter = true;
 			return match;
@@ -265,12 +282,16 @@ export default class MagicString {
 	}
 
 	insert() {
-		throw new Error('magicString.insert(...) is deprecated. Use prependRight(...) or appendLeft(...)');
+		throw new Error(
+			'magicString.insert(...) is deprecated. Use prependRight(...) or appendLeft(...)'
+		);
 	}
 
 	insertLeft(index, content) {
 		if (!warned.insertLeft) {
-			console.warn('magicString.insertLeft(...) is deprecated. Use magicString.appendLeft(...) instead'); // eslint-disable-line no-console
+			console.warn(
+				'magicString.insertLeft(...) is deprecated. Use magicString.appendLeft(...) instead'
+			); // eslint-disable-line no-console
 			warned.insertLeft = true;
 		}
 
@@ -279,7 +300,9 @@ export default class MagicString {
 
 	insertRight(index, content) {
 		if (!warned.insertRight) {
-			console.warn('magicString.insertRight(...) is deprecated. Use magicString.prependRight(...) instead'); // eslint-disable-line no-console
+			console.warn(
+				'magicString.insertRight(...) is deprecated. Use magicString.prependRight(...) instead'
+			); // eslint-disable-line no-console
 			warned.insertRight = true;
 		}
 
@@ -328,6 +351,11 @@ export default class MagicString {
 	}
 
 	overwrite(start, end, content, options) {
+		options = options || {};
+		return this.update(start, end, content, { ...options, overwrite: !options.contentOnly });
+	}
+
+	update(start, end, content, options) {
 		if (typeof content !== 'string') throw new TypeError('replacement content must be a string');
 
 		while (start < 0) start += this.original.length;
@@ -335,7 +363,9 @@ export default class MagicString {
 
 		if (end > this.original.length) throw new Error('end is out of bounds');
 		if (start === end)
-			throw new Error('Cannot overwrite a zero-length range – use appendLeft or prependRight instead');
+			throw new Error(
+				'Cannot overwrite a zero-length range – use appendLeft or prependRight instead'
+			);
 
 		if (DEBUG) this.stats.time('overwrite');
 
@@ -344,39 +374,40 @@ export default class MagicString {
 
 		if (options === true) {
 			if (!warned.storeName) {
-				console.warn('The final argument to magicString.overwrite(...) should be an options object. See https://github.com/rich-harris/magic-string'); // eslint-disable-line no-console
+				console.warn(
+					'The final argument to magicString.overwrite(...) should be an options object. See https://github.com/rich-harris/magic-string'
+				); // eslint-disable-line no-console
 				warned.storeName = true;
 			}
 
 			options = { storeName: true };
 		}
 		const storeName = options !== undefined ? options.storeName : false;
-		const contentOnly = options !== undefined ? options.contentOnly : false;
+		const overwrite = options !== undefined ? options.overwrite : false;
 
 		if (storeName) {
 			const original = this.original.slice(start, end);
-			this.storedNames[original] = true;
+			Object.defineProperty(this.storedNames, original, {
+				writable: true,
+				value: true,
+				enumerable: true,
+			});
 		}
 
 		const first = this.byStart[start];
 		const last = this.byEnd[end];
 
 		if (first) {
-			if (end > first.end && first.next !== this.byStart[first.end]) {
-				throw new Error('Cannot overwrite across a split point');
-			}
-
-			first.edit(content, storeName, contentOnly);
-
-			if (first !== last) {
-				let chunk = first.next;
-				while (chunk !== last) {
-					chunk.edit('', false);
-					chunk = chunk.next;
+			let chunk = first;
+			while (chunk !== last) {
+				if (chunk.next !== this.byStart[chunk.end]) {
+					throw new Error('Cannot overwrite across a split point');
 				}
-
+				chunk = chunk.next;
 				chunk.edit('', false);
 			}
+
+			first.edit(content, storeName, !overwrite);
 		} else {
 			// must be inserting at the end
 			const newChunk = new Chunk(start, end, '').edit(content, storeName);
@@ -464,53 +495,43 @@ export default class MagicString {
 	}
 
 	lastChar() {
-		if (this.outro.length)
-			return this.outro[this.outro.length - 1];
+		if (this.outro.length) return this.outro[this.outro.length - 1];
 		let chunk = this.lastChunk;
 		do {
-			if (chunk.outro.length)
-				return chunk.outro[chunk.outro.length - 1];
-			if (chunk.content.length)
-				return chunk.content[chunk.content.length - 1];
-			if (chunk.intro.length)
-				return chunk.intro[chunk.intro.length - 1];
-		} while (chunk = chunk.previous);
-		if (this.intro.length)
-			return this.intro[this.intro.length - 1];
+			if (chunk.outro.length) return chunk.outro[chunk.outro.length - 1];
+			if (chunk.content.length) return chunk.content[chunk.content.length - 1];
+			if (chunk.intro.length) return chunk.intro[chunk.intro.length - 1];
+		} while ((chunk = chunk.previous));
+		if (this.intro.length) return this.intro[this.intro.length - 1];
 		return '';
 	}
 
 	lastLine() {
 		let lineIndex = this.outro.lastIndexOf(n);
-		if (lineIndex !== -1)
-			return this.outro.substr(lineIndex + 1);
+		if (lineIndex !== -1) return this.outro.substr(lineIndex + 1);
 		let lineStr = this.outro;
 		let chunk = this.lastChunk;
 		do {
 			if (chunk.outro.length > 0) {
 				lineIndex = chunk.outro.lastIndexOf(n);
-				if (lineIndex !== -1)
-					return chunk.outro.substr(lineIndex + 1) + lineStr;
+				if (lineIndex !== -1) return chunk.outro.substr(lineIndex + 1) + lineStr;
 				lineStr = chunk.outro + lineStr;
 			}
 
 			if (chunk.content.length > 0) {
 				lineIndex = chunk.content.lastIndexOf(n);
-				if (lineIndex !== -1)
-					return chunk.content.substr(lineIndex + 1) + lineStr;
+				if (lineIndex !== -1) return chunk.content.substr(lineIndex + 1) + lineStr;
 				lineStr = chunk.content + lineStr;
 			}
 
 			if (chunk.intro.length > 0) {
 				lineIndex = chunk.intro.lastIndexOf(n);
-				if (lineIndex !== -1)
-					return chunk.intro.substr(lineIndex + 1) + lineStr;
+				if (lineIndex !== -1) return chunk.intro.substr(lineIndex + 1) + lineStr;
 				lineStr = chunk.intro + lineStr;
 			}
-		} while (chunk = chunk.previous);
+		} while ((chunk = chunk.previous));
 		lineIndex = this.intro.lastIndexOf(n);
-		if (lineIndex !== -1)
-			return this.intro.substr(lineIndex + 1) + lineStr;
+		if (lineIndex !== -1) return this.intro.substr(lineIndex + 1) + lineStr;
 		return this.intro + lineStr;
 	}
 
@@ -592,9 +613,7 @@ export default class MagicString {
 			// zero-length edited chunks are a special case (overlapping replacements)
 			const loc = getLocator(this.original)(index);
 			throw new Error(
-				`Cannot split a chunk that has already been edited (${loc.line}:${loc.column} – "${
-					chunk.original
-				}")`
+				`Cannot split a chunk that has already been edited (${loc.line}:${loc.column} – "${chunk.original}")`
 			);
 		}
 
@@ -626,11 +645,13 @@ export default class MagicString {
 	isEmpty() {
 		let chunk = this.firstChunk;
 		do {
-			if (chunk.intro.length && chunk.intro.trim() ||
-					chunk.content.length && chunk.content.trim() ||
-					chunk.outro.length && chunk.outro.trim())
+			if (
+				(chunk.intro.length && chunk.intro.trim()) ||
+				(chunk.content.length && chunk.content.trim()) ||
+				(chunk.outro.length && chunk.outro.trim())
+			)
 				return false;
-		} while (chunk = chunk.next);
+		} while ((chunk = chunk.next));
 		return true;
 	}
 
@@ -639,7 +660,7 @@ export default class MagicString {
 		let length = 0;
 		do {
 			length += chunk.intro.length + chunk.content.length + chunk.outro.length;
-		} while (chunk = chunk.next);
+		} while ((chunk = chunk.next));
 		return length;
 	}
 
@@ -716,5 +737,101 @@ export default class MagicString {
 	trimStart(charType) {
 		this.trimStartAborted(charType);
 		return this;
+	}
+
+	hasChanged() {
+		return this.original !== this.toString();
+	}
+
+	_replaceRegexp(searchValue, replacement) {
+		function getReplacement(match, str) {
+			if (typeof replacement === 'string') {
+				return replacement.replace(/\$(\$|&|\d+)/g, (_, i) => {
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_a_parameter
+					if (i === '$') return '$';
+					if (i === '&') return match[0];
+					const num = +i;
+					if (num < match.length) return match[+i];
+					return `$${i}`;
+				});
+			} else {
+				return replacement(...match, match.index, str, match.groups);
+			}
+		}
+		function matchAll(re, str) {
+			let match;
+			const matches = [];
+			while ((match = re.exec(str))) {
+				matches.push(match);
+			}
+			return matches;
+		}
+		if (searchValue.global) {
+			const matches = matchAll(searchValue, this.original);
+			matches.forEach((match) => {
+				if (match.index != null)
+					this.overwrite(
+						match.index,
+						match.index + match[0].length,
+						getReplacement(match, this.original)
+					);
+			});
+		} else {
+			const match = this.original.match(searchValue);
+			if (match && match.index != null)
+				this.overwrite(
+					match.index,
+					match.index + match[0].length,
+					getReplacement(match, this.original)
+				);
+		}
+		return this;
+	}
+
+	_replaceString(string, replacement) {
+		const { original } = this;
+		const index = original.indexOf(string);
+
+		if (index !== -1) {
+			this.overwrite(index, index + string.length, replacement);
+		}
+
+		return this;
+	}
+
+	replace(searchValue, replacement) {
+		if (typeof searchValue === 'string') {
+			return this._replaceString(searchValue, replacement);
+		}
+
+		return this._replaceRegexp(searchValue, replacement);
+	}
+
+	_replaceAllString(string, replacement) {
+		const { original } = this;
+		const stringLength = string.length;
+		for (
+			let index = original.indexOf(string);
+			index !== -1;
+			index = original.indexOf(string, index + stringLength)
+		) {
+			this.overwrite(index, index + stringLength, replacement);
+		}
+
+		return this;
+	}
+
+	replaceAll(searchValue, replacement) {
+		if (typeof searchValue === 'string') {
+			return this._replaceAllString(searchValue, replacement);
+		}
+
+		if (!searchValue.global) {
+			throw new TypeError(
+				'MagicString.prototype.replaceAll called with a non-global RegExp argument'
+			);
+		}
+
+		return this._replaceRegexp(searchValue, replacement);
 	}
 }

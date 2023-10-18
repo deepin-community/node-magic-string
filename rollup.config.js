@@ -1,21 +1,19 @@
-import buble from 'rollup-plugin-buble';
-import resolve from 'rollup-plugin-node-resolve';
-import replace from 'rollup-plugin-replace';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
 
 const plugins = [
-	buble({ exclude: 'node_modules/**' }),
-	resolve(),
-	replace({ DEBUG: false })
+	nodeResolve(),
+	replace({ DEBUG: false, preventAssignment: true })
 ];
 
 export default [
 	/* esm */
 	{
 		input: 'src/index.js',
-		external: ['sourcemap-codec'],
+		external: ['@jridgewell/sourcemap-codec'],
 		plugins,
 		output: {
-			file: 'dist/magic-string.es.js',
+			file: 'dist/magic-string.es.mjs',
 			format: 'es',
 			exports: 'named',
 			sourcemap: true
@@ -25,7 +23,7 @@ export default [
 	/* cjs */
 	{
 		input: 'src/index-legacy.js',
-		external: ['sourcemap-codec'],
+		external: ['@jridgewell/sourcemap-codec'],
 		plugins,
 		output: {
 			file: 'dist/magic-string.cjs.js',
