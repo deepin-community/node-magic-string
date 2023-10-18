@@ -1,4 +1,167 @@
-# magic-string changelog
+## [0.30.1](https://github.com/rich-harris/magic-string/compare/v0.30.0...v0.30.1) (2023-07-04)
+
+
+### Bug Fixes
+
+* expose .d.ts as cjs version ([#253](https://github.com/rich-harris/magic-string/issues/253)) ([262e113](https://github.com/rich-harris/magic-string/commit/262e113ee25e9c7d317282b3015102ec932ae2f5))
+
+
+
+# [0.30.0](https://github.com/rich-harris/magic-string/compare/v0.29.0...v0.30.0) (2023-02-22)
+
+
+### Bug Fixes
+
+* `null` is invalid for `sources` and `file` ([#242](https://github.com/rich-harris/magic-string/issues/242)) ([d4e9c31](https://github.com/rich-harris/magic-string/commit/d4e9c31082491cfa177b31ce725c9ce39491d549))
+
+
+### Features
+
+* add the ability to ignore-list sources ([#243](https://github.com/rich-harris/magic-string/issues/243)) ([e238f04](https://github.com/rich-harris/magic-string/commit/e238f04be31ec9a3e19b18b75bb5d859f9cb2654))
+
+
+
+# [0.29.0](https://github.com/rich-harris/magic-string/compare/v0.28.0...v0.29.0) (2023-02-11)
+
+
+### Features
+
+* **x_google_ignoreList:** initial support for ignore lists ([3c711cd](https://github.com/rich-harris/magic-string/commit/3c711cd56de6c9735f92e41e457353005c2c0d1c))
+
+
+
+# [0.28.0](https://github.com/rich-harris/magic-string/compare/v0.27.0...v0.28.0) (2023-02-11)
+
+
+### Bug Fixes
+
+* **typings:** sourcesContent may contain null ([#235](https://github.com/rich-harris/magic-string/issues/235)) ([c2b652a](https://github.com/rich-harris/magic-string/commit/c2b652a0d353f183ca991d0b59a7ad0250a52735))
+
+
+
+# [0.27.0](https://github.com/rich-harris/magic-string/compare/v0.26.7...v0.27.0) (2022-12-03)
+
+
+### Performance Improvements
+
+* use @jridgewell/sourcemap-codec ([e68f3e0](https://github.com/rich-harris/magic-string/commit/e68f3e05fe6d87acc1c41eddae97fc32e004320b))
+
+
+
+## [0.26.7](https://github.com/rich-harris/magic-string/compare/v0.26.6...v0.26.7) (2022-10-09)
+
+
+### Bug Fixes
+
+* avoid mutating provided options ([#227](https://github.com/rich-harris/magic-string/issues/227)) ([01d033e](https://github.com/rich-harris/magic-string/commit/01d033e6e8630ef1d0482d9a3899f1da2bf933d5))
+
+
+
+## [0.26.6](https://github.com/rich-harris/magic-string/compare/v0.26.5...v0.26.6) (2022-10-05)
+
+
+### Features
+
+* add `update` method as safer alternative to `overwrite` ([#212](https://github.com/rich-harris/magic-string/issues/212)) ([9a312e3](https://github.com/rich-harris/magic-string/commit/9a312e37a02629f7496c6cfcf307832e991669a3))
+
+
+
+## [0.26.5](https://github.com/rich-harris/magic-string/compare/v0.26.4...v0.26.5) (2022-09-30)
+
+
+### Bug Fixes
+
+* update typescript definition file to contain `replaceAll()` ([#224](https://github.com/rich-harris/magic-string/issues/224)) ([45a4921](https://github.com/rich-harris/magic-string/commit/45a49214ba244b906f4d20450debc8edcc06e2a8))
+
+
+
+## [0.26.4](https://github.com/rich-harris/magic-string/compare/v0.26.3...v0.26.4) (2022-09-22)
+
+
+### Features
+
+* fix `.replace()` when searching string, add `.replaceAll()` ([#222](https://github.com/rich-harris/magic-string/issues/222)) ([04a05bd](https://github.com/rich-harris/magic-string/commit/04a05bdc9bf56e00e616a0ae07923fbd9b63fbd0))
+
+
+### Performance Improvements
+
+* avoiding use of Object.defineProperty in Chunk constructor ([#219](https://github.com/rich-harris/magic-string/issues/219)) ([130794b](https://github.com/rich-harris/magic-string/commit/130794bb8bfd9f21eb1f50c36a1da8eb5443d256))
+
+
+
+## [0.26.3](https://github.com/rich-harris/magic-string/compare/v0.26.2...v0.26.3) (2022-08-30)
+
+
+### Performance Improvements
+
+* delay guess encoded ([#216](https://github.com/rich-harris/magic-string/issues/216)) ([69b13c7](https://github.com/rich-harris/magic-string/commit/69b13c7a09af742e4f31cf419e8f96e6db32ab5a))
+
+
+
+## [0.26.2](https://github.com/rich-harris/magic-string/compare/v0.26.1...v0.26.2) (2022-05-11)
+
+
+### Bug Fixes
+
+* specify types in exports ([#214](https://github.com/rich-harris/magic-string/issues/214)) ([985e7b4](https://github.com/rich-harris/magic-string/commit/985e7b4d8a6fd5911d2ad2e6524999e9198a6b9f))
+
+
+
+## [0.26.1](https://github.com/rich-harris/magic-string/compare/v0.26.0...v0.26.1) (2022-03-03)
+
+
+### Bug Fixes
+
+* **replace:** match replacer function signature with spec ([902541f](https://github.com/rich-harris/magic-string/commit/902541fdff3998e3c957908de10769d2af1a3c70))
+
+
+
+# [0.26.0](https://github.com/rich-harris/magic-string/compare/v0.25.9...v0.26.0) (2022-03-03)
+
+## BREAKING CHANGES
+
+* Support of Node.js v10 is dropped. Now `magic-string` requires Node.js v12 or higher. ([#204](https://github.com/Rich-Harris/magic-string/pull/204))
+* ESM bundle is now shipped with `.mjs` extension ([#197](https://github.com/Rich-Harris/magic-string/pull/197))
+
+```diff
+-  "module": "dist/magic-string.es.js",
++  "module": "dist/magic-string.es.mjs",
++  "exports": {
++    "./package.json": "./package.json",
++    ".": {
++      "import": "./dist/magic-string.es.mjs",
++      "require": "./dist/magic-string.cjs.js"
++    }
++  },
+```
+
+### Features
+
+* new `hasChanged` method ([#202](https://github.com/rich-harris/magic-string/issues/202)) ([5f2dba7](https://github.com/rich-harris/magic-string/commit/5f2dba72774c444538ed10aa5f2096104cb0b4bb))
+* support `replace` method ([#203](https://github.com/rich-harris/magic-string/issues/203)) ([cd74ea2](https://github.com/rich-harris/magic-string/commit/cd74ea2e374f526079ae1a9b9f29bc9cc2fd2ac3))
+
+
+
+## [0.25.9](https://github.com/rich-harris/magic-string/compare/v0.25.8...v0.25.9) (2022-03-03)
+
+
+### Bug Fixes
+
+* allowed overwrite across moved content preceded by split ([#192](https://github.com/rich-harris/magic-string/issues/192)) ([403fa86](https://github.com/rich-harris/magic-string/commit/403fa86b3dcc73f6b2eff177218b7bd4d3128f63))
+* **types:** make options partial by default ([2815e77](https://github.com/rich-harris/magic-string/commit/2815e77dd20ff9f776282420eaacfb4aa9e70cd7))
+* use defineProperty for appending prop in `storeName` ([#194](https://github.com/rich-harris/magic-string/issues/194)) ([96b7cd3](https://github.com/rich-harris/magic-string/commit/96b7cd37016c1e3fd7037b3910ae56f806a9c09f))
+
+
+
+## [0.25.8](https://github.com/rich-harris/magic-string/compare/v0.25.7...v0.25.8) (2022-03-02)
+
+
+### Bug Fixes
+
+* **types:** mark `MagicString` options as optional ([#183](https://github.com/rich-harris/magic-string/issues/183)) ([15c3e66](https://github.com/rich-harris/magic-string/commit/15c3e6691a2cce79d5298af15fd8a2b02facef88))
+
+
+
 
 ## 0.25.7
 

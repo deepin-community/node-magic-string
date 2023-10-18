@@ -6,15 +6,15 @@ Uploaders: Julien Puydt <jpuydt@debian.org>
 Build-Depends: debhelper-compat (= 13),
                dh-sequence-nodejs,
                mocha,
+               node-ampproject-remapping <!nocheck>,
                node-rollup-plugin-node-resolve,
                node-rollup-plugin-buble,
                node-rollup-plugin-replace,
                node-source-map-support,
                node-sourcemap-codec,
                node-vlq,
-               nodejs,
                rollup (>= 1~)
-Standards-Version: 4.6.0
+Standards-Version: 4.6.2
 Homepage: https://github.com/rich-harris/magic-string
 Vcs-Git: https://salsa.debian.org/js-team/node-magic-string.git
 Vcs-Browser: https://salsa.debian.org/js-team/node-magic-string
@@ -24,7 +24,8 @@ Rules-Requires-Root: no
 Package: node-magic-string
 Architecture: all
 Multi-Arch: foreign
-Depends: node-sourcemap-codec (>= 1.4.5-2~), node-vlq, nodejs, ${misc:Depends}
+Depends: ${misc:Depends}
+ , node-ampproject-remapping
 Breaks: node-buble (<< 0.19.8-7~)
  , rollup (<< 1)
 Description: Modify strings, generate sourcemaps

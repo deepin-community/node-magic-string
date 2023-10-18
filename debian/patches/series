@@ -1,2 +1,2 @@
 no_mocha_opts.patch
-drop-legacy-plugins.patch
+fix-for-rollup-3.patch

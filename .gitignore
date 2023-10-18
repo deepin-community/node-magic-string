@@ -1,1 +1,9 @@
-.pc/
+.DS_Store
+node_modules
+sandbox
+.gobbl*
+.tmp
+!.babelrc
+coverage
+dist
+yarn.lock

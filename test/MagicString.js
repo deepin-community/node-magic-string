@@ -1,5 +1,5 @@
 const assert = require('assert');
-const SourceMapConsumer = require('source-map').SourceMapConsumer;
+const SourceMapConsumer = require('source-map-js').SourceMapConsumer;
 const MagicString = require('./utils/IntegrityCheckingMagicString');
 
 require('source-map-support').install();
@@ -12,6 +12,12 @@ describe('MagicString', () => {
 			});
 
 			assert.equal(s.filename, 'foo.js');
+		});
+
+		it('stores ignore-list hint', () => {
+			const s = new MagicString('abc', { ignoreList: true });
+
+			assert.equal(s.ignoreList, true);
 		});
 	});
 
@@ -417,6 +423,16 @@ describe('MagicString', () => {
 
 			const map = s.generateMap();
 			assert.equal(map.mappings, 'IAAA');
+		});
+
+		it('generates x_google_ignoreList', () => {
+			const s = new MagicString('function foo(){}', {
+				ignoreList: true
+		  });
+
+			const map = s.generateMap({ source: 'foo.js' });
+			assert.deepEqual(map.sources, ['foo.js']);
+			assert.deepEqual(map.x_google_ignoreList, [0]);
 		});
 	});
 
@@ -824,11 +840,26 @@ describe('MagicString', () => {
 			assert.equal(s.toString(), 'a&^...!?defghijkl');
 		});
 
-		it('disallows overwriting across moved content', () => {
+		it('disallows overwriting partially overlapping moved content', () => {
 			const s = new MagicString('abcdefghijkl');
 
 			s.move(6, 9, 3);
 			assert.throws(() => s.overwrite(5, 7, 'XX'), /Cannot overwrite across a split point/);
+		});
+
+		it('disallows overwriting fully surrounding content moved away', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.move(6, 9, 3);
+			assert.throws(() => s.overwrite(4, 11, 'XX'), /Cannot overwrite across a split point/);
+		});
+
+		it('disallows overwriting fully surrounding content moved away even if there is another split', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.move(6, 9, 3);
+			s.appendLeft(5, 'foo');
+			assert.throws(() => s.overwrite(4, 11, 'XX'), /Cannot overwrite across a split point/);
 		});
 
 		it('allows later insertions at the end', () => {
@@ -836,6 +867,141 @@ describe('MagicString', () => {
 
 			s.appendLeft(4, '(');
 			s.overwrite(2, 7, '');
+			s.appendLeft(7, 'h');
+			assert.equal(s.toString(), 'abh');
+		});
+	});
+
+	describe('update', () => {
+		it('should replace characters', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.update(5, 8, 'FGH');
+			assert.equal(s.toString(), 'abcdeFGHijkl');
+		});
+
+		it('should throw an error if overlapping replacements are attempted', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.update(7, 11, 'xx');
+
+			assert.throws(() => s.update(8, 12, 'yy'), /Cannot split a chunk that has already been edited/);
+
+			assert.equal(s.toString(), 'abcdefgxxl');
+
+			s.update(6, 12, 'yes');
+			assert.equal(s.toString(), 'abcdefyes');
+		});
+
+		it('should allow contiguous but non-overlapping replacements', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.update(3, 6, 'DEF');
+			assert.equal(s.toString(), 'abcDEFghijkl');
+
+			s.update(6, 9, 'GHI');
+			assert.equal(s.toString(), 'abcDEFGHIjkl');
+
+			s.update(0, 3, 'ABC');
+			assert.equal(s.toString(), 'ABCDEFGHIjkl');
+
+			s.update(9, 12, 'JKL');
+			assert.equal(s.toString(), 'ABCDEFGHIJKL');
+		});
+
+		it('does not replace zero-length inserts at update start location', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.remove(0, 6);
+			s.appendLeft(6, 'DEF');
+			s.update(6, 9, 'GHI');
+			assert.equal(s.toString(), 'DEFGHIjkl');
+		});
+
+		it('replaces zero-length inserts inside update with overwrite option', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.appendLeft(6, 'XXX');
+			s.update(3, 9, 'DEFGHI', { overwrite: true });
+			assert.equal(s.toString(), 'abcDEFGHIjkl');
+		});
+
+		it('replaces non-zero-length inserts inside update', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.update(3, 4, 'XXX');
+			s.update(3, 5, 'DE');
+			assert.equal(s.toString(), 'abcDEfghijkl');
+
+			s.update(7, 8, 'YYY');
+			s.update(6, 8, 'GH');
+			assert.equal(s.toString(), 'abcDEfGHijkl');
+		});
+
+		it('should return this', () => {
+			const s = new MagicString('abcdefghijkl');
+			assert.strictEqual(s.update(3, 4, 'D'), s);
+		});
+
+		it('should disallow updating zero-length ranges', () => {
+			const s = new MagicString('x');
+			assert.throws(() => s.update(0, 0, 'anything'), /Cannot overwrite a zero-length range – use appendLeft or prependRight instead/);
+		});
+
+		it('should throw when given non-string content', () => {
+			const s = new MagicString('');
+			assert.throws(() => s.update(0, 1, []), TypeError);
+		});
+
+		it('replaces interior inserts with overwrite option', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.appendLeft(1, '&');
+			s.prependRight(1, '^');
+			s.appendLeft(3, '!');
+			s.prependRight(3, '?');
+			s.update(1, 3, '...', { overwrite: true });
+			assert.equal(s.toString(), 'a&...?defghijkl');
+		});
+
+		it('preserves interior inserts with `contentOnly: true`', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.appendLeft(1, '&');
+			s.prependRight(1, '^');
+			s.appendLeft(3, '!');
+			s.prependRight(3, '?');
+			s.update(1, 3, '...', { contentOnly: true });
+			assert.equal(s.toString(), 'a&^...!?defghijkl');
+		});
+
+		it('disallows overwriting partially overlapping moved content', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.move(6, 9, 3);
+			assert.throws(() => s.update(5, 7, 'XX'), /Cannot overwrite across a split point/);
+		});
+
+		it('disallows overwriting fully surrounding content moved away', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.move(6, 9, 3);
+			assert.throws(() => s.update(4, 11, 'XX'), /Cannot overwrite across a split point/);
+		});
+
+		it('disallows overwriting fully surrounding content moved away even if there is another split', () => {
+			const s = new MagicString('abcdefghijkl');
+
+			s.move(6, 9, 3);
+			s.appendLeft(5, 'foo');
+			assert.throws(() => s.update(4, 11, 'XX'), /Cannot overwrite across a split point/);
+		});
+
+		it('allows later insertions at the end with overwrite option', () => {
+			const s = new MagicString('abcdefg');
+
+			s.appendLeft(4, '(');
+			s.update(2, 7, '', { overwrite: true });
 			s.appendLeft(7, 'h');
 			assert.equal(s.toString(), 'abh');
 		});
@@ -1260,6 +1426,154 @@ describe('MagicString', () => {
 			s.append('\n//lastline');
 
 			assert.equal(s.lastLine(), '//lastline');
+		});
+	});
+
+	describe('hasChanged', () => {
+		it('should works', () => {
+			const s = new MagicString(' abcde   fghijkl ');
+
+			assert.ok(!s.hasChanged());
+		
+			assert.ok(s.clone().prepend('  ').hasChanged());
+			assert.ok(s.clone().overwrite(1, 2, 'b').hasChanged());
+			assert.ok(s.clone().remove(1, 6).hasChanged());
+
+			s.trim();
+
+			assert.ok(s.hasChanged());
+
+			const clone = s.clone();
+
+			assert.ok(clone.hasChanged());
+		});
+	});
+  
+	describe('replace', () => {
+		it('works with string replace', () => {
+			const code = '1 2 1 2';
+			const s = new MagicString(code);
+
+			s.replace('2', '3');
+
+			assert.strictEqual(s.toString(), '1 3 1 2');
+		});
+
+		it('Should not treat string as regexp', () => {
+			assert.strictEqual(
+				new MagicString('1234').replace('.', '*').toString(),
+				'1234'
+			);
+		});
+
+		it('Should use substitution directly', () => {
+			assert.strictEqual(
+				new MagicString('11').replace('1', '$0$1').toString(),
+				'$0$11'
+			);
+		});
+
+		it('Should not search back', () => {
+			assert.strictEqual(
+				new MagicString('122121').replace('12', '21').toString(),
+				'212121'
+			);
+		});
+
+		it('works with global regex replace', () => {
+			const s = new MagicString('1 2 3 4 a b c');
+
+			s.replace(/(\d)/g, 'xx$1$10');
+
+			assert.strictEqual(s.toString(), 'xx1$10 xx2$10 xx3$10 xx4$10 a b c');
+		});
+
+		it('works with global regex replace $$', () => {
+			const s = new MagicString('1 2 3 4 a b c');
+
+			s.replace(/(\d)/g, '$$');
+
+			assert.strictEqual(s.toString(),'$ $ $ $ a b c');
+		});
+
+		it('works with global regex replace function', () => {
+			const code = 'hey this is magic';
+			const s = new MagicString(code);
+
+			s.replace(/(\w)(\w+)/g, (_, $1, $2) => `${$1.toUpperCase()}${$2}`);
+
+			assert.strictEqual(s.toString(),'Hey This Is Magic');
+		});
+
+		it('replace function offset', () => {
+			// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_function_as_a_parameter
+			function replacer(match, p1, p2, p3, offset, string, groups) {
+				// p1 is nondigits, p2 digits, and p3 non-alphanumerics
+				return [match, p1, p2, p3, offset, string, groups].join(' - ');
+			}
+			const code = 'abc12345#$*%';
+			const regex = /([^\d]*)(\d*)([^\w]*)/;
+			assert.strictEqual(
+				code.replace(regex, replacer),
+				new MagicString(code).replace(regex, replacer).toString()
+			);
+		});
+	});
+  
+	describe('replaceAll', () => {
+		it('works with string replace', () => {
+			assert.strictEqual(
+				new MagicString('1212').replaceAll('2', '3').toString(),
+				'1313',
+			);
+		});
+
+		it('Should not treat string as regexp', () => {
+			assert.strictEqual(
+				new MagicString('1234').replaceAll('.', '*').toString(),
+				'1234'
+			);
+		});
+
+		it('Should use substitution directly', () => {
+			assert.strictEqual(
+				new MagicString('11').replaceAll('1', '$0$1').toString(),
+				'$0$1$0$1'
+			);
+		});
+
+		it('Should not search back', () => {
+			assert.strictEqual(
+				new MagicString('121212').replaceAll('12', '21').toString(),
+				'212121'
+			);
+		});
+
+		it('global regex result the same as .replace', () => {
+			assert.strictEqual(
+				new MagicString('1 2 3 4 a b c').replaceAll(/(\d)/g, 'xx$1$10').toString(),
+				new MagicString('1 2 3 4 a b c').replace(/(\d)/g, 'xx$1$10').toString(),
+			);
+
+			assert.strictEqual(
+				new MagicString('1 2 3 4 a b c').replaceAll(/(\d)/g, '$$').toString(),
+				new MagicString('1 2 3 4 a b c').replace(/(\d)/g, '$$').toString(),
+			);
+
+			assert.strictEqual(
+				new MagicString('hey this is magic').replaceAll(/(\w)(\w+)/g, (_, $1, $2) => `${$1.toUpperCase()}${$2}`).toString(),
+				new MagicString('hey this is magic').replace(/(\w)(\w+)/g, (_, $1, $2) => `${$1.toUpperCase()}${$2}`).toString(),
+			);
+		});
+
+		it('rejects with non-global regexp', () => {
+			assert.throws(
+				() => new MagicString('123').replaceAll(/./, ''),
+				{
+					name: 'TypeError',
+					message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',
+				},
+			);
 		});
 	});
 });
